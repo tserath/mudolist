@@ -1,8 +1,0 @@
-packages:
-  - name: frontend
-    type: container
-    public: true
-    
-  - name: backend
-    type: container
-    public: true
