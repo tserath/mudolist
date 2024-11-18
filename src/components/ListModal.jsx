@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   useTheme,
   useMediaQuery,
@@ -26,58 +26,98 @@ import {
   Add as AddIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import useStore from '../store/useStore';
 
-function ListModal({ open, onClose, list }) {
+function ListModal({ open, onClose, list: initialList }) {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const [newItemText, setNewItemText] = useState('');
   const [completedExpanded, setCompletedExpanded] = useState(false);
-  const { addItem, updateItem, deleteItem, reorderItems } = useStore((state) => ({
+  const [isEditing, setIsEditing] = useState(false);
+  const [title, setTitle] = useState(initialList?.title || '');
+
+  const { addItem, updateItem, deleteItem, reorderItems, list, updateList, deleteList } = useStore((state) => ({
     addItem: state.addItem,
     updateItem: state.updateItem,
     deleteItem: state.deleteItem,
     reorderItems: state.reorderItems,
+    list: state.lists.find(l => l.id === initialList.id && l.type === 'list'),
+    updateList: state.updateList,
+    deleteList: state.deleteList,
   }));
 
-  const handleAddItem = (e) => {
+  useEffect(() => {
+    setTitle(list?.title || '');
+  }, [list?.title]);
+
+  const handleAddItem = async (e) => {
     if (e.key === 'Enter' && newItemText.trim()) {
-      const newItem = addItem(list.id, newItemText.trim());
-      setNewItemText('');
-      // Force a re-render by updating the list reference
-      if (list.items) {
-        list.items = [...list.items, newItem];
-      } else {
-        list.items = [newItem];
+      try {
+        await addItem(list.id, newItemText.trim());
+        setNewItemText('');
+      } catch (error) {
+        console.error('Failed to add item:', error);
       }
     }
   };
 
-  const handleToggleItem = (itemId) => {
-    const item = list.items.find(i => i.id === itemId);
-    const newCompleted = !item.completed;
-    updateItem(list.id, itemId, { completed: newCompleted });
-    
-    // Force a re-render by updating the list reference
-    list.items = list.items.map(i => 
-      i.id === itemId 
-        ? { ...i, completed: newCompleted }
-        : i
-    );
+  const handleToggleItem = async (itemId) => {
+    try {
+      const item = list.items.find(i => i.id === itemId);
+      await updateItem(list.id, itemId, { completed: !item.completed });
+    } catch (error) {
+      console.error('Failed to toggle item:', error);
+    }
   };
 
-  const handleDeleteItem = (itemId) => {
-    deleteItem(list.id, itemId);
-    
-    // Force a re-render by updating the list reference
-    list.items = list.items.filter(i => i.id !== itemId);
+  const handleDeleteItem = async (itemId) => {
+    try {
+      await deleteItem(list.id, itemId);
+    } catch (error) {
+      console.error('Failed to delete item:', error);
+    }
   };
 
-  const onDragEnd = (result) => {
+  const onDragEnd = async (result) => {
     if (!result.destination) return;
-    reorderItems(list.id, result.source.index, result.destination.index);
+    try {
+      await reorderItems(list.id, result.source.index, result.destination.index);
+    } catch (error) {
+      console.error('Failed to reorder items:', error);
+    }
+  };
+
+  const handleEditClick = (e) => {
+    e.stopPropagation();
+    setIsEditing(true);
+  };
+
+  const handleDeleteClick = (e) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this list?')) {
+      deleteList(list.id);
+      onClose();
+    }
+  };
+
+  const handleTitleChange = (e) => {
+    setTitle(e.target.value);
+  };
+
+  const handleTitleSave = () => {
+    if (title.trim() !== list.title) {
+      updateList(list.id, { ...list, title: title.trim() });
+    }
+    setIsEditing(false);
+  };
+
+  const handleTitleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleTitleSave();
+    }
   };
 
   const uncompleted = list?.items?.filter(item => !item.completed) || [];
@@ -93,8 +133,9 @@ function ListModal({ open, onClose, list }) {
       PaperProps={{
         sx: {
           borderRadius: fullScreen ? 0 : 2,
-          height: fullScreen ? '100%' : 'auto',
-          maxHeight: fullScreen ? '100%' : '90vh',
+          height: fullScreen ? '100%' : '600px',
+          maxHeight: fullScreen ? '100%' : '600px',
+          minHeight: fullScreen ? '100%' : '600px',
           display: 'flex',
           flexDirection: 'column',
         },
@@ -108,22 +149,65 @@ function ListModal({ open, onClose, list }) {
           borderTopRightRadius: fullScreen ? 0 : 2,
         }}
       >
-        <Toolbar>
-          <Typography sx={{ flex: 1 }} variant="h6">
-            {list?.title}
-          </Typography>
+        <Toolbar sx={{ display: 'flex', alignItems: 'center' }}>
+          {isEditing ? (
+            <TextField
+              autoFocus
+              value={title}
+              onChange={handleTitleChange}
+              onKeyPress={handleTitleKeyPress}
+              onBlur={handleTitleSave}
+              sx={{ 
+                flex: 1,
+                '& .MuiInputBase-root': {
+                  color: 'inherit'
+                },
+                '& .MuiInput-underline:before': {
+                  borderBottomColor: 'inherit'
+                }
+              }}
+            />
+          ) : (
+            <Typography sx={{ flex: 1 }} variant="h6">
+              {list?.title}
+            </Typography>
+          )}
+          <IconButton
+            edge="end"
+            color="inherit"
+            onClick={handleEditClick}
+            sx={{ ml: 1 }}
+          >
+            <EditIcon />
+          </IconButton>
+          <IconButton
+            edge="end"
+            color="inherit"
+            onClick={handleDeleteClick}
+            sx={{ ml: 1 }}
+          >
+            <DeleteIcon />
+          </IconButton>
           <IconButton
             edge="end"
             color="inherit"
             onClick={onClose}
             aria-label="close"
+            sx={{ ml: 1 }}
           >
             <CloseIcon />
           </IconButton>
         </Toolbar>
       </AppBar>
       
-      <DialogContent sx={{ flex: 1, overflow: 'auto', pb: 0 }}>
+      <DialogContent 
+        sx={{ 
+          flex: 1, 
+          overflow: 'auto', 
+          pb: 0,
+          backgroundColor: theme.palette.background.paper,
+        }}
+      >
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId={`list-${list?.id}-items`}>
             {(provided) => (
@@ -141,7 +225,9 @@ function ListModal({ open, onClose, list }) {
                             ? `${provided.draggableProps.style?.transform || ''} scale(1.02)`
                             : provided.draggableProps.style?.transform,
                           transition: 'transform 0.2s ease',
-                          backgroundColor: snapshot.isDragging ? 'action.hover' : 'background.paper',
+                          backgroundColor: snapshot.isDragging 
+                            ? theme.palette.action.hover
+                            : theme.palette.background.paper,
                         }}
                       >
                         <ListItemIcon>

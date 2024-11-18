@@ -1,45 +1,38 @@
 services:
   mudolist:
     container_name: mudolist
-    # Replace with your own image or build from Dockerfile
-    image: your-registry/mudolist:latest
+    image: ghcr.io/tserath/mudolist:latest
     networks:
       local:
-        # Configure your desired internal network IP
         ipv4_address: 192.168.10.15
     environment:
       - NODE_ENV=production
       - VITE_HOST=0.0.0.0
       - MONGODB_URI=mongodb://mongo:27017/mudolist
       - PORT=5000
-      # Add your allowed CORS origins here, separated by commas
-      - CORS_ORIGIN=https://your-domain.com,http://localhost:5173
-      # Generate a new JWT secret using either:
-      # 1. Node.js: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-      # 2. OpenSSL: openssl rand -base64 32
-      - JWT_SECRET=REPLACE_WITH_YOUR_SECRET
+      - CORS_ORIGIN=https://mudolist.stormfall.win,http://localhost:5173,http://192.168.0.126:5173,http://192.168.10.15:5173,http://0.0.0.0:5173
+      - JWT_SECRET=F6ecggS1IKjkHVDZr/ahwOvR21q/9N4ILAhDKnNS+6U=
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
       - "traefik.enable=true"
       # API configuration (higher priority)
-      # Replace your-domain.com with your actual domain
       - "traefik.http.routers.mudolist-api.priority=200"
-      - "traefik.http.routers.mudolist-api.rule=Host(`your-domain.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.mudolist-api.rule=Host(`mudolist.stormfall.win`) && PathPrefix(`/api`)"
       - "traefik.http.routers.mudolist-api.entrypoints=websecure"
       - "traefik.http.routers.mudolist-api.tls=true"
       - "traefik.http.routers.mudolist-api.service=mudolist-api"
       - "traefik.http.services.mudolist-api.loadbalancer.server.port=5000"
       # Frontend configuration (lower priority)
       - "traefik.http.routers.mudolist-frontend.priority=100"
-      - "traefik.http.routers.mudolist-frontend.rule=Host(`your-domain.com`)"
+      - "traefik.http.routers.mudolist-frontend.rule=Host(`mudolist.stormfall.win`)"
       - "traefik.http.routers.mudolist-frontend.entrypoints=websecure"
       - "traefik.http.routers.mudolist-frontend.tls=true"
       - "traefik.http.routers.mudolist-frontend.middlewares=authelia-auth@docker"
       - "traefik.http.routers.mudolist-frontend.service=mudolist-frontend"
       - "traefik.http.services.mudolist-frontend.loadbalancer.server.port=5173"
     expose:
-      - "5000"  # API port
-      - "5173"  # Frontend port
+      - "5000"
+      - "5173"
     depends_on:
       - mongo
     command: ["/app/start.sh"]
@@ -48,21 +41,17 @@ services:
     container_name: mudolist-mongodb
     image: mongo:latest
     expose:
-      - "27017"  # MongoDB port
+      - "27017"
     volumes:
-      - mongodb_data:/data/db  # Persistent MongoDB data
+      - mongodb_data:/data/db
     networks:
       local:
-        # Configure MongoDB internal network IP
         ipv4_address: 192.168.10.17
 
-# Make sure you have created this network first using:
-# docker network create --subnet=192.168.10.0/24 local
 networks:
   local:
     external: true
 
-# Persistent volumes for data storage
 volumes:
   mongodb_data:
     name: mudolist-mongodb-data

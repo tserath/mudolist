@@ -40,8 +40,31 @@ export default defineConfig({
     watch: {
       usePolling: true,
     },
-    host: true,
+    host: '0.0.0.0',
     strictPort: true,
-    port: 5173
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://mudolist:5000',
+        changeOrigin: true,
+        secure: false,
+        ws: true
+      }
+    }
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom'],
+  },
+  build: {
+    sourcemap: true,
+    commonjsOptions: {
+      sourceMap: false
+    },
+    rollupOptions: {
+      output: {
+        sourcemap: true,
+        sourcemapExcludeSources: true
+      }
+    }
   }
 })

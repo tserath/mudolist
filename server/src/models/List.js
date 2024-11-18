@@ -1,9 +1,11 @@
 import mongoose from 'mongoose';
+import generateId from '../utils/generateId.js';
 
 const itemSchema = new mongoose.Schema({
   id: {
     type: String,
     required: true,
+    default: () => generateId()
   },
   text: {
     type: String,
@@ -13,14 +15,18 @@ const itemSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 }, {
   _id: false,
 });
 
 const listSchema = new mongoose.Schema({
-  id: {
+  _id: {
     type: String,
-    required: true,
+    default: () => generateId()
   },
   type: {
     type: String,
@@ -37,7 +43,18 @@ const listSchema = new mongoose.Schema({
   },
   items: {
     type: [itemSchema],
-    default: [],
+    default: function() {
+      return this.type === 'list' ? [] : undefined;
+    },
+    validate: {
+      validator: function(v) {
+        if (this.type === 'note') {
+          return v === undefined || v.length === 0;
+        }
+        return true;
+      },
+      message: 'Notes cannot have items'
+    }
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -57,9 +74,23 @@ const listSchema = new mongoose.Schema({
   }],
 }, {
   timestamps: true,
+  toJSON: {
+    virtuals: true,
+    transform: function(doc, ret) {
+      ret.id = ret._id;
+      delete ret.__v;
+      return ret;
+    }
+  }
+});
+
+// Add virtual id field
+listSchema.virtual('id').get(function() {
+  return this._id;
 });
 
 // Index for efficient queries
+listSchema.index({ _id: 1 });
 listSchema.index({ user: 1, type: 1 });
 listSchema.index({ 'shared.user': 1 });
 
