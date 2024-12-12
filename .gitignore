@@ -19,6 +19,7 @@ node_modules/
 
 # Docker
 docker-compose.prod.yml
+docker-compose.dev.yml
 
 # Scripts
 push-changes.sh
