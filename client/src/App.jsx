@@ -8,17 +8,21 @@ import Login from './components/Login';
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { settings, isAuthenticated, fetchLists } = useStore((state) => ({
+  const { settings, isAuthenticated, fetchLists, token } = useStore((state) => ({
     settings: state.settings,
     isAuthenticated: state.isAuthenticated,
     fetchLists: state.fetchLists,
+    token: state.token,
   }));
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchLists();
+    if (isAuthenticated && token) {
+      fetchLists().catch(error => {
+        console.error('Failed to fetch lists:', error);
+        // If token is invalid, it will be cleared by fetchWithAuth
+      });
     }
-  }, [isAuthenticated, fetchLists]);
+  }, [isAuthenticated, token, fetchLists]);
 
   const theme = useMemo(() => {
     const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -29,6 +33,33 @@ function App() {
     return createTheme({
       palette: {
         mode: themeMode,
+        background: {
+          default: themeMode === 'dark' ? '#121212' : '#f5f5f5',
+          paper: themeMode === 'dark' ? '#1e1e1e' : '#ffffff',
+        },
+        ...(themeMode === 'dark' && {
+          action: {
+            hover: 'rgba(255, 255, 255, 0.08)',
+          },
+        }),
+      },
+      components: {
+        MuiDialog: {
+          styleOverrides: {
+            paper: {
+              backgroundColor: themeMode === 'dark' ? '#1e1e1e' : '#ffffff',
+            },
+          },
+        },
+        MuiListItem: {
+          styleOverrides: {
+            root: {
+              '&:hover': {
+                backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+              },
+            },
+          },
+        },
       },
     });
   }, [settings.theme]);

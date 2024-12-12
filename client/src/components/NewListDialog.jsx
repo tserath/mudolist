@@ -21,18 +21,20 @@ function NewListDialog({ open, onClose, type = 'list' }) {
     onClose();
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (title.trim()) {
-      if (type === 'note') {
-        const newNote = createNote(title.trim(), '');
-        handleClose();
-        // Signal to parent that we want to open the note modal
-        onClose(newNote);
-      } else {
-        const newList = createList(title.trim());
-        handleClose();
-        // Signal to parent that we want to open the list modal
-        onClose(newList);
+      try {
+        if (type === 'note') {
+          const newNote = await createNote(title.trim(), '');
+          handleClose();
+          onClose({ type: 'note', item: newNote });
+        } else {
+          const newList = await createList(title.trim());
+          handleClose();
+          onClose({ type: 'list', item: newList });
+        }
+      } catch (error) {
+        console.error('Failed to create item:', error);
       }
     }
   };

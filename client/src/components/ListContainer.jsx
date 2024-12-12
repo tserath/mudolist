@@ -17,14 +17,20 @@ function ListContainer() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [dialogType, setDialogType] = useState('list');
   const longPressTimer = useRef(null);
-  const { lists, reorderLists, settings } = useStore((state) => ({
+  const { lists, reorderLists, settings, isAuthenticated } = useStore((state) => ({
     lists: state.lists,
     reorderLists: state.reorderLists,
     settings: state.settings,
+    isAuthenticated: state.isAuthenticated,
   }));
 
   // Sort lists according to settings
   const sortedLists = [...lists].sort((a, b) => {
+    // First, sort by pinned status
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    
+    // Then sort by date according to settings
     if (settings.sortOrder === 'newest') {
       return new Date(b.createdAt) - new Date(a.createdAt);
     }
@@ -41,8 +47,8 @@ function ListContainer() {
     setOpen(false);
     
     // If a new item was created, open it
-    if (newItem) {
-      setSelectedItem(newItem);
+    if (newItem?.item) {
+      setSelectedItem(newItem.item);
     }
   };
 
@@ -85,36 +91,22 @@ function ListContainer() {
       <DragDropContext onDragEnd={onDragEnd}>
         <Droppable droppableId="list-droppable">
           {(provided) => (
-            <Grid
-              container
-              spacing={gridSpacing}
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-            >
-              {sortedLists.map((list, index) => (
+            <Grid container spacing={2} ref={provided.innerRef} {...provided.droppableProps}>
+              {sortedLists.map((item, index) => (
                 <Draggable
-                  key={list.id}
-                  draggableId={list.id}
+                  key={item.id}
+                  draggableId={item.id}
                   index={index}
+                  isDragDisabled={!isAuthenticated}
                 >
                   {(provided, snapshot) => (
-                    <Grid
-                      item
-                      xs={12}
-                      sm={settings.viewLayout === 'grid' ? 6 : 12}
-                      md={settings.viewLayout === 'grid' ? 4 : 12}
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                      style={{
-                        ...provided.draggableProps.style,
-                        transform: snapshot.isDragging
-                          ? `${provided.draggableProps.style?.transform || ''} scale(1.02)`
-                          : provided.draggableProps.style?.transform,
-                        transition: 'transform 0.2s ease',
-                      }}
-                    >
-                      <ListItem list={list} />
+                    <Grid item xs={12} sm={6} md={4} lg={3} key={item.id} ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
+                      <ListItem
+                        item={item}
+                        provided={provided}
+                        snapshot={snapshot}
+                        type={item.type}
+                      />
                     </Grid>
                   )}
                 </Draggable>

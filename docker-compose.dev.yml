@@ -1,9 +1,8 @@
-name: mudolist
+name: mudoedit
 services:
   mudolist:
     container_name: mudolist
-    image: ghcr.io/tserath/mudolist:latest
-    volumes: []
+    build: .
     networks:
       local:
         ipv4_address: 192.168.10.15
@@ -29,7 +28,7 @@ services:
       - "traefik.http.routers.mudolist-frontend.rule=Host(`mudolist.stormfall.win`)"
       - "traefik.http.routers.mudolist-frontend.entrypoints=websecure"
       - "traefik.http.routers.mudolist-frontend.tls=true"
-      - "traefik.http.routers.mudolist-frontend.middlewares=authelia@file"
+      - "traefik.http.routers.mudolist-frontend.middlewares=authelia-auth@docker"
       - "traefik.http.routers.mudolist-frontend.service=mudolist-frontend"
       - "traefik.http.services.mudolist-frontend.loadbalancer.server.port=5173"
     expose:
