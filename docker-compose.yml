@@ -3,16 +3,35 @@ services:
   mudolist:
     container_name: mudolist
     image: ghcr.io/tserath/mudolist:latest
-    ports:
-      - "5000:5000"
-      - "5173:5173"
+    build: ./src/working
+    volumes: []
+    networks:
+      local:
+        ipv4_address: 192.168.10.5
     environment:
       - NODE_ENV=production
       - VITE_HOST=0.0.0.0
       - MONGODB_URI=mongodb://mongo:27017/mudolist
       - PORT=5000
-      - CORS_ORIGIN=http://localhost:5173
+      - CORS_ORIGIN=https://mudolist.shadowdust.win,http://localhost:5173,http://192.168.0.107:5173,http://192.168.10.15:5173,http://0.0.0.0:5173
       - JWT_SECRET=F6ecggS1IKjkHVDZr/ahwOvR21q/9N4ILAhDKnNS+6U=
+    labels:
+      - "traefik.enable=true"
+      # Frontend service
+      - "traefik.http.services.mudolist-web.loadbalancer.server.port=5173"
+      - "traefik.http.routers.mudolist-web.service=mudolist-web"
+      - "traefik.http.routers.mudolist-web.rule=Host(`mudolist.shadowdust.win`)"
+      - "traefik.http.routers.mudolist-web.entrypoints=websecure"
+      - "traefik.http.routers.mudolist-web.tls=true"
+      # Backend service
+      - "traefik.http.services.mudolist-api.loadbalancer.server.port=5000"
+      - "traefik.http.routers.mudolist-api.service=mudolist-api"
+      - "traefik.http.routers.mudolist-api.rule=Host(`mudolist.shadowdust.win`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.mudolist-api.entrypoints=websecure"
+      - "traefik.http.routers.mudolist-api.tls=true"
+    ports:
+      - "5000:5000"
+      - "5173:5173"
     depends_on:
       - mongo
     command: ["/app/start.sh"]
@@ -20,10 +39,18 @@ services:
   mongo:
     container_name: mudolist-mongodb
     image: mongo:latest
-    ports:
-      - "27017:27017"
+    expose:
+      - "27017"
     volumes:
-      - mongodb_data:/data/db
+      - ./Data/db:/data/db
+    networks:
+      local:
+        ipv4_address: 192.168.10.6
+
+networks:
+  local:
+    external: true
 
 volumes:
   mongodb_data:
+    name: mudolist-mongodb-data

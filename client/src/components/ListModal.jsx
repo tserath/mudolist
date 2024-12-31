@@ -73,7 +73,11 @@ function ListModal({ open, onClose, list: initialList }) {
     }
   };
 
-  const handleToggleItem = async (itemId) => {
+  const handleToggleItem = async (itemId, event) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     try {
       console.log('Toggling item:', itemId);
       const item = list.items.find(i => i.id === itemId);
@@ -275,6 +279,10 @@ function ListModal({ open, onClose, list: initialList }) {
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
+                        onClick={(event) => {
+                          if (event.target.closest('.MuiCheckbox-root')) return;
+                          handleMenuOpen(event, item);
+                        }}
                         sx={{
                           ...provided.draggableProps.style,
                           transform: snapshot.isDragging
@@ -286,11 +294,12 @@ function ListModal({ open, onClose, list: initialList }) {
                             : theme.palette.background.paper,
                         }}
                       >
-                        <ListItemIcon>
+                        <ListItemIcon onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             edge="start"
                             checked={item.completed}
-                            onChange={() => handleToggleItem(item.id)}
+                            onChange={(e) => handleToggleItem(item.id, e)}
+                            onClick={(e) => e.stopPropagation()}
                           />
                         </ListItemIcon>
                         {editingItemId === item.id ? (
@@ -345,11 +354,12 @@ function ListModal({ open, onClose, list: initialList }) {
               <List>
                 {completed.map((item) => (
                   <ListItem key={item.id}>
-                    <ListItemIcon>
+                    <ListItemIcon onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         edge="start"
                         checked={item.completed}
-                        onChange={() => handleToggleItem(item.id)}
+                        onChange={(e) => handleToggleItem(item.id, e)}
+                        onClick={(e) => e.stopPropagation()}
                       />
                     </ListItemIcon>
                     {editingItemId === item.id ? (

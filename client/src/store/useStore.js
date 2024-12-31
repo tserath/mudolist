@@ -4,7 +4,10 @@ import { generateId } from '../utils/idGenerator';
 
 // Get the base URL for API requests
 const isDev = import.meta.env.DEV;
-const API_URL = isDev ? 'http://localhost:5000' : window.location.origin;
+const isLocalIP = window.location.hostname.match(/^(\d{1,3}\.){3}\d{1,3}$/);
+const API_URL = isDev || isLocalIP 
+  ? `${window.location.protocol}//${window.location.hostname}:5000`
+  : window.location.origin;
 
 // Helper to construct API URLs
 const apiPath = (path) => `${API_URL}/api${path}`;
@@ -353,7 +356,7 @@ const useStore = create(
                     ...list,
                     items: list.items.map((item) =>
                       item.id === itemId
-                        ? { ...item, ...updates }
+                        ? { ...updatedItem }  // Use the complete server response including new ID
                         : item
                     ),
                   }
